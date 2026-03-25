@@ -5,15 +5,27 @@ require_once '../config/database.php';
 require_once '../includes/functions.php';
 require_once '../includes/auth_check.php';
 
-$stmt = $pdo->query("
+$studentNumber = trim($_GET['student_number'] ?? '');
+
+$sql = "
     SELECT l.*, u.first_name, u.last_name, u.student_id,
            e.name, e.code, e.image
     FROM loans l
     JOIN users u ON l.user_id = u.user_id
     JOIN equipment e ON l.equipment_id = e.equipment_id
-    WHERE l.status IN ('active', 'overdue')
-    ORDER BY l.due_date ASC
-");
+    WHERE l.status IN ('active', 'overdue')";
+
+if ($studentNumber !== '') {
+    $sql .= " AND u.student_id LIKE :student_id";
+}
+
+$sql .= " ORDER BY l.due_date ASC";
+
+$stmt = $pdo->prepare($sql);
+if ($studentNumber !== '') {
+    $stmt->bindValue(':student_id', '%' . $studentNumber . '%', PDO::PARAM_STR);
+}
+$stmt->execute();
 $active_loans = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -31,6 +43,17 @@ $active_loans = $stmt->fetchAll();
     <div class="main-content">
         <div class="page-header">
             <h1 class="page-title">Process Returns</h1>
+
+            <form method="GET" action="returns.php" class="search-form" style="margin-top:12px;">
+                <input type="text" name="student_number" class="input search-input"
+                       placeholder="Search by Student Number"
+                       value="<?php echo htmlspecialchars($_GET['student_number'] ?? ''); ?>">
+                <button type="submit" class="btn btn-primary btn-sm">Search</button>
+                <?php if (!empty($_GET['student_number'] ?? '')): ?>
+                    <a href="returns.php" class="btn btn-secondary btn-sm">Clear</a>
+                <?php endif; ?>
+            </form>
+
         </div>
 
         <?php if (isset($_SESSION['success'])): ?>

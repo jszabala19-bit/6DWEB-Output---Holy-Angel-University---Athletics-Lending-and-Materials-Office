@@ -21,6 +21,9 @@ if ($user_id <= 0) {
 $stmt = $pdo->prepare("SELECT * FROM users WHERE user_id = ? AND role = 'student' LIMIT 1");
 $stmt->execute([$user_id]);
 $student = $stmt->fetch(PDO::FETCH_ASSOC);
+if ($student) {
+    $student['computed_year_level'] = getYearLevelFromEnrollmentDate($student['enrollment_date'] ?? null);
+}
 
 if (!$student) {
     $_SESSION['error'] = 'Student not found.';
@@ -134,15 +137,9 @@ $history = $hist->fetchAll(PDO::FETCH_ASSOC);
                         <input class="form-control" id="department" name="department" value="<?php echo esc($student['department']); ?>">
                         </div>
                         <div class="form-group">
-                            <label class="form-label" for="year_level">Year Level</label>
-                            <select class="form-control" id="year_level" name="year_level">
-                                <?php
-                                $years = ['1','2','3','4','Graduate'];
-                                foreach ($years as $y):
-                                ?>
-                                    <option value="<?php echo $y; ?>" <?php echo ($student['year_level'] === $y) ? 'selected' : ''; ?>><?php echo $y; ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <label class="form-label required" for="enrollment_date">Enrollment Date</label>
+                            <input class="form-control" id="enrollment_date" name="enrollment_date" type="date" required value="<?php echo esc($student['enrollment_date']); ?>">
+                            <small class="form-text">Computed Year Level: <?php echo htmlspecialchars($student['computed_year_level']); ?></small>
                         </div>
                     </div>
 

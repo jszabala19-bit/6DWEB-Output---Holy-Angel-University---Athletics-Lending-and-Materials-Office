@@ -5,6 +5,11 @@ require_once '../config/database.php';
 require_once '../config/points_system.php';
 require_once '../includes/functions.php';
 require_once '../includes/auth_check.php';
+require_once '../includes/overdue_notifier.php';
+
+// Send overdue reminders (email only, safe no-op if disabled)
+runOverdueEmailNotifier($pdo);
+
 
 // Check for overdue loans
 checkOverdueLoans($pdo);
@@ -219,32 +224,6 @@ $page_title = 'Admin Dashboard';
                             </table>
                         </div>
                     <?php endif; ?>
-                </div>
-            </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="card" style="margin-top: 30px;">
-            <div class="card-header">
-                <h2 class="card-title">Quick Actions</h2>
-            </div>
-            <div class="card-body">
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                    <a href="inventory.php?action=add" class="btn btn-primary btn-block">
-                        ➕ Add Equipment
-                    </a>
-                    <a href="requests.php" class="btn btn-secondary btn-block">
-                        📋 Review Requests
-                    </a>
-                    <a href="returns.php" class="btn btn-secondary btn-block">
-                        ↩️ Process Return
-                    </a>
-                    <a href="students.php" class="btn btn-secondary btn-block">
-                        👥 Manage Students
-                    </a>
-                    <a href="reports.php" class="btn btn-secondary btn-block">
-                        📊 View Reports
-                    </a>
                 </div>
             </div>
         </div>

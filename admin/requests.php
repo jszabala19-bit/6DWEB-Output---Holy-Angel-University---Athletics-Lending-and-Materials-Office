@@ -53,7 +53,7 @@ $requests = $stmt->fetchAll();
                 <div class="table-responsive">
 <table class="table">
                     <thead><tr>
-                        <th>Student</th><th>Equipment</th><th>Dates</th><th>Points</th><th>Actions</th>
+                        <th>Student</th><th>Equipment</th><th>Dates</th><th>Reason for Borrowing</th><th>Points</th><th>Actions</th>
                     </tr></thead>
                     <tbody>
                         <?php foreach ($requests as $r): ?>
@@ -63,6 +63,7 @@ $requests = $stmt->fetchAll();
                             <td><?php echo htmlspecialchars($r['name']); ?><br><small><?php echo $r['code']; ?></small></td>
                             <td>Pickup: <?php echo formatDate($r['pickup_date']); ?><br>
                                 Return: <?php echo formatDate($r['expected_return_date']); ?></td>
+                            <td><?php echo nl2br(htmlspecialchars(trim((string)($r['student_notes'] ?? '')) !== '' ? $r['student_notes'] : 'No reason provided.')); ?></td>
                             <td><span class="points-badge status-<?php echo $r['points_status']; ?>"><?php echo $r['points']; ?> pts</span></td>
                             <td>
                                 <form method="POST" action="../actions/approve-request.php" style="display:inline;">
