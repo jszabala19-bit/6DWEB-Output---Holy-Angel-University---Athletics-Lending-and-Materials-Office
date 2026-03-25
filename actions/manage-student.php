@@ -40,7 +40,7 @@ try {
         $email      = sanitize($_POST['email'] ?? '');
         $phone      = sanitize($_POST['phone'] ?? '');
         $department = sanitize($_POST['department'] ?? '');
-        $year_level = sanitize($_POST['year_level'] ?? '');
+        $enrollment_date = trim($_POST['enrollment_date'] ?? '');
 
         if ($first_name === '' || $last_name === '' || $email === '') {
             throw new Exception('Please fill in required fields.');
@@ -48,12 +48,18 @@ try {
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw new Exception('Invalid email address.');
         }
-        if ($year_level !== '' && !in_array($year_level, ['1','2','3','4','Graduate'], true)) {
-            throw new Exception('Invalid year level.');
+        if ($enrollment_date === '') {
+            throw new Exception('Please provide the enrollment date.');
         }
 
-        $stmt = $pdo->prepare("UPDATE users SET first_name = ?, last_name = ?, email = ?, phone = ?, department = ?, year_level = ? WHERE user_id = ? AND role = 'student'");
-        $stmt->execute([$first_name, $last_name, $email, $phone ?: null, $department ?: null, $year_level ?: null, $user_id]);
+        $dt = date_create($enrollment_date);
+        if (!$dt) {
+            throw new Exception('Invalid enrollment date.');
+        }
+
+        $enrollment_date = $dt->format('Y-m-d');
+        $stmt = $pdo->prepare("UPDATE users SET first_name = ?, last_name = ?, email = ?, phone = ?, department = ?, enrollment_date = ? WHERE user_id = ? AND role = 'student'");
+        $stmt->execute([$first_name, $last_name, $email, $phone ?: null, $department ?: null, $enrollment_date, $user_id]);
 
         $_SESSION['success'] = 'Student profile updated.';
         header('Location: ../admin/student_manage.php?id=' . $user_id);

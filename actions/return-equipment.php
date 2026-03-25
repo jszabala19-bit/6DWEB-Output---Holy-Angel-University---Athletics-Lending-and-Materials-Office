@@ -29,63 +29,50 @@ if (empty($loan_id) || empty($condition_on_return)) {
 try {
     $pdo->beginTransaction();
 
-    // Get loan details
+    // Minimal loan info (needed to compute days late + points)
     $stmt = $pdo->prepare("
-        SELECT l.*, e.code, e.name, e.equipment_id, u.email, u.first_name, u.last_name
-        FROM loans l
-        JOIN equipment e ON l.equipment_id = e.equipment_id
-        JOIN users u ON l.user_id = u.user_id
-        WHERE l.loan_id = ? AND l.status IN ('active', 'overdue')
+        SELECT due_date, condition_on_checkout, user_id
+        FROM loans
+        WHERE loan_id = ? AND status IN ('active', 'overdue')
     ");
     $stmt->execute([$loan_id]);
-    $loan = $stmt->fetch();
+    $base = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$loan) {
+    if (!$base) {
         throw new Exception('Loan not found or already returned');
     }
 
     $return_date = date('Y-m-d H:i:s');
-    $days_late = getDaysLate($return_date, $loan['due_date']);
+    $days_late = getDaysLate($return_date, $base['due_date']);
 
     // Determine return status
     $return_status = ($days_late > 0) ? 'returned_late' : 'returned';
 
-    // Update loan record
-    $stmt = $pdo->prepare("
-        UPDATE loans
-        SET return_date = ?,
-            status = ?,
-            days_overdue = ?,
-            condition_on_return = ?,
-            returned_to = ?,
-            return_notes = ?
-        WHERE loan_id = ?
-    ");
+    // Update loan + equipment in SQL
+    $stmt = $pdo->prepare("CALL sp_return_equipment_update(?, ?, ?, ?, ?, ?)");
     $stmt->execute([
-        $return_date,
+        $loan_id,
+        $admin_id,
         $return_status,
         $days_late,
         $condition_on_return,
-        $admin_id,
-        $return_notes,
-        $loan_id
+        $return_notes
     ]);
 
-    // Update equipment quantity
-    $stmt = $pdo->prepare("
-        UPDATE equipment
-        SET quantity_available = quantity_available + 1
-        WHERE equipment_id = ?
-    ");
-    $stmt->execute([$loan['equipment_id']]);
+    $loan = $stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt->closeCursor();
 
-    // Calculate points change
+    if (!$loan || (int)$loan['ok'] !== 1) {
+        throw new Exception($loan['message'] ?? 'Return failed');
+    }
+
+    // Calculate points change (same logic as before)
     $points_result = calculateReturnPoints($days_late, $loan['condition_on_checkout'], $condition_on_return);
     $points_change = $points_result['points_change'];
     $reason = $points_result['reason'];
     $action_type = ($points_change < 0) ? 'penalty' : 'reward';
 
-    // Apply points change
+    // Apply points change (now handled by SQL procedure)
     $new_points = updateUserPoints(
         $pdo,
         $loan['user_id'],
@@ -106,52 +93,57 @@ try {
     // Prepare success message
     $points_msg = ($points_change > 0) ? "+{$points_change}" : $points_change;
     $_SESSION['success'] = "Equipment returned successfully. Points: {$points_msg}. Student's new balance: {$new_points}";
+    // Email is sent ONLY if the item was overdue
+    if ($days_late > 0) {
 
-    // Send email notification
-    $email_message = "
+
+        // Send email notification (same template)
+        $email_message = "
         <html>
         <head>
-            <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: #800000; color: white; padding: 20px; text-align: center; }
-                .content { background: #f9f9f9; padding: 20px; }
-                .points { font-size: 24px; font-weight: bold; color: " . ($points_change >= 0 ? '#28a745' : '#dc3545') . "; }
-                .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
-            </style>
+        <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #800000; color: white; padding: 20px; text-align: center; }
+        .content { background: #f9f9f9; padding: 20px; }
+        .points { font-size: 24px; font-weight: bold; color: " . ($points_change >= 0 ? '#28a745' : '#dc3545') . "; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+        </style>
         </head>
         <body>
-            <div class='container'>
-                <div class='header'>
-                    <h2>Equipment Returned - HAU Athletics</h2>
-                </div>
-                <div class='content'>
-                    <p>Dear {$loan['first_name']},</p>
-                    <p>Your equipment <strong>{$loan['name']}</strong> (Code: {$loan['code']}) has been returned.</p>
-                    <p><strong>Return Status:</strong> " . ucfirst(str_replace('_', ' ', $return_status)) . "</p>
-                    " . ($days_late > 0 ? "<p><strong>Days Late:</strong> {$days_late}</p>" : "") . "
-                    <p><strong>Points Change:</strong> <span class='points'>{$points_msg}</span></p>
-                    <p><strong>Current Points:</strong> {$new_points}</p>
-                    <p><strong>Reason:</strong> {$reason}</p>
-                    <p>Thank you for using HAU Athletics Equipment Portal.</p>
-                </div>
-                <div class='footer'>
-                    <p>&copy; " . date('Y') . " Holy Angel University - Athletics Department</p>
-                </div>
-            </div>
+        <div class='container'>
+        <div class='header'>
+        <h2>Overdue Return Notice - HAU Athletics</h2>
+        </div>
+        <div class='content'>
+        <p>Dear {$loan['first_name']},</p>
+        <p>Your equipment <strong>{$loan['name']}</strong> (Code: {$loan['code']}) has been returned.</p>
+        <p><strong>Return Status:</strong> " . ucfirst(str_replace('_', ' ', $return_status)) . "</p>
+        " . ($days_late > 0 ? "<p><strong>Days Late:</strong> {$days_late}</p>" : "") . "
+        <p><strong>Points Change:</strong> <span class='points'>{$points_msg}</span></p>
+        <p><strong>Current Points:</strong> {$new_points}</p>
+        <p><strong>Reason:</strong> {$reason}</p>
+        <p>Thank you for using HAU Athletics Equipment Portal.</p>
+        </div>
+        <div class='footer'>
+        <p>&copy; " . date('Y') . " Holy Angel University - Athletics Department</p>
+        </div>
+        </div>
         </body>
         </html>
-    ";
+        ";
 
-    sendEmail($loan['email'], 'Equipment Returned - HAU Athletics', $email_message);
+        sendEmail($loan['email'], 'Overdue Equipment Notice - HAU Athletics', $email_message);
 
-    header('Location: ../admin/returns.php');
+
+    }
+header('Location: ../admin/returns.php');
 
 } catch (Exception $e) {
     if (isset($pdo) && $pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    error_log("Return process failed: " . $e->getMessage());
+    error_log("Return failed: " . $e->getMessage());
     $_SESSION['error'] = 'Return failed: ' . $e->getMessage();
     header('Location: ../admin/returns.php');
 }
