@@ -1,11 +1,14 @@
 <?php
-// ===================================================================
 // AUTHENTICATION CHECK
 // Include this file at the top of protected pages
-// ===================================================================
+
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+}
+
+if (isset($pdo) && function_exists('autoArchiveExpiredStudents')) {
+    autoArchiveExpiredStudents($pdo);
 }
 
 // Check if user is logged in
