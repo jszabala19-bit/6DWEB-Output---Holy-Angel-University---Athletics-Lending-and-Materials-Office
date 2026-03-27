@@ -1,6 +1,7 @@
 <?php
 require_once '../config/config.php';
 require_once '../config/database.php';
+require_once '../includes/functions.php';
 
 // Redirect if already logged in
 if (isset($_SESSION['user_id'])) {
@@ -14,6 +15,10 @@ if (isset($_SESSION['user_id'])) {
 
 $error = '';
 
+if (function_exists('autoArchiveExpiredStudents')) {
+    autoArchiveExpiredStudents($pdo);
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $student_id = trim($_POST['student_id'] ?? '');
     $password = $_POST['password'] ?? '';
@@ -23,45 +28,73 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } else {
         try {
             $stmt = $pdo->prepare("
-                SELECT user_id, student_id, first_name, last_name, email, password, role, points, points_status, status
+                SELECT user_id, student_id, first_name, last_name, email, password, role, points, points_status, status, COALESCE(is_archived, 0) AS is_archived
                 FROM users
                 WHERE student_id = ?
             ");
             $stmt->execute([$student_id]);
             $user = $stmt->fetch();
 
-            if ($user && $password === $user['password']) {
-                // Check if account is suspended
-                if ($user['status'] == 'suspended') {
-                    $error = 'Your account is suspended. Please contact Athletics Office.';
-                } else {
-                    // Set session variables
-                    $_SESSION['user_id'] = $user['user_id'];
-                    $_SESSION['student_id'] = $user['student_id'];
-                    $_SESSION['first_name'] = $user['first_name'];
-                    $_SESSION['last_name'] = $user['last_name'];
-                    $_SESSION['email'] = $user['email'];
-                    $_SESSION['role'] = $user['role'];
-                    $_SESSION['points'] = $user['points'];
-                    $_SESSION['points_status'] = $user['points_status'];
-                    $_SESSION['last_activity'] = time();
+            if ($user) {
+                $stored = (string)$user['password'];
+                $ok = false;
 
-                    // Update last login
-                    $stmt = $pdo->prepare("UPDATE users SET last_login = NOW() WHERE user_id = ?");
-                    $stmt->execute([$user['user_id']]);
+                // Secure check: hashed passwords
+                if (password_verify($password, $stored)) {
+                    $ok = true;
 
-                    // Redirect based on role
-                    if ($user['role'] == 'admin') {
-                        header('Location: ../admin/dashboard.php');
-                    } else {
-                        header('Location: ../student/dashboard.php');
+                    if (password_needs_rehash($stored, PASSWORD_DEFAULT)) {
+                        $new_hash = password_hash($password, PASSWORD_DEFAULT);
+                        $pdo->prepare("UPDATE users SET password = ? WHERE user_id = ?")->execute([$new_hash, $user['user_id']]);
                     }
-                    exit;
+                } else {
+                    // Legacy support (plain-text passwords in old DBs):
+                    // If it matches, upgrade it to a hash immediately.
+                    if (!preg_match('/^\$2[ayb]\$/', $stored) && hash_equals($stored, (string)$password)) {
+                        $new_hash = password_hash($password, PASSWORD_DEFAULT);
+                        $pdo->prepare("UPDATE users SET password = ? WHERE user_id = ?")->execute([$new_hash, $user['user_id']]);
+                        $ok = true;
+                    }
+                }
+
+                if ($ok) {
+                    if ((int)($user['is_archived'] ?? 0) === 1 && $user['role'] === 'student') {
+                        $error = 'Your account has already been archived after reaching four years from the enrollment date.';
+                    // Check if account is suspended
+                    } elseif ($user['status'] == 'suspended') {
+                        $error = 'Your account is suspended. Please contact Athletics Office.';
+                    } else {
+                        session_regenerate_id(true); // Prevent session fixation
+                        // Set session variables
+                        $_SESSION['user_id'] = $user['user_id'];
+                        $_SESSION['student_id'] = $user['student_id'];
+                        $_SESSION['first_name'] = $user['first_name'];
+                        $_SESSION['last_name'] = $user['last_name'];
+                        $_SESSION['email'] = $user['email'];
+                        $_SESSION['role'] = $user['role'];
+                        $_SESSION['points'] = $user['points'];
+                        $_SESSION['points_status'] = $user['points_status'];
+                        $_SESSION['last_activity'] = time();
+
+                        // Update last login
+                        $stmt = $pdo->prepare("UPDATE users SET last_login = NOW() WHERE user_id = ?");
+                        $stmt->execute([$user['user_id']]);
+
+                        // Redirect based on role
+                        if ($user['role'] == 'admin') {
+                            header('Location: ../admin/dashboard.php');
+                        } else {
+                            header('Location: ../student/dashboard.php');
+                        }
+                        exit;
+                    }
+                } else {
+                    $error = 'Invalid Student ID or password';
                 }
             } else {
                 $error = 'Invalid Student ID or password';
             }
-        } catch (PDOException $e) {
+} catch (PDOException $e) {
             error_log("Login error: " . $e->getMessage());
             $error = 'Login failed. Please try again.';
         }
@@ -75,146 +108,151 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - <?php echo SITE_NAME; ?></title>
     <link rel="stylesheet" href="../assets/css/style.css">
+ <style>
     <style>
-        .login-container {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
-                        url('../assets/images/login-background.png');
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-            padding: 20px;
-        }
+    .login-container {
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
+                    url('../assets/images/login-background.png');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        overflow: hidden;
+    }
 
-        .login-box {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            max-width: 420px;
-            width: 100%;
-            overflow: hidden;
-        }
+    .login-box {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
+        width: 100%;
+        max-width: 460px;
+        height: auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
 
-        .login-header {
-            background: white;
-            padding: 40px 30px 30px;
-            text-align: center;
-            border-bottom: 1px solid #dee2e6;
-        }
+    .login-header {
+        padding: 30px 25px 20px;
+        text-align: center;
+        border-bottom: 1px solid #dee2e6;
+    }
 
-        .login-logo {
-            width: 100%;
-            max-width: 180px;
-            margin: 0 auto 25px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+    .login-logo {
+        width: 100%;
+        max-width: 220px;
+        margin: 0 auto 15px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
 
-        .login-title {
-            font-size: 24px;
-            font-weight: 600;
-            color: #800000;
-            margin-bottom: 5px;
-        }
+    .login-title {
+        font-size: 26px;
+        font-weight: 600;
+        color: #800000;
+        margin-bottom: 4px;
+    }
 
-        .login-subtitle {
-            font-size: 14px;
-            color: #666;
-            font-style: italic;
-        }
+    .login-subtitle {
+        font-size: 14px;
+        color: #666;
+        font-style: italic;
+    }
 
-        .login-body {
-            padding: 30px;
-        }
+    .login-body {
+        padding: 20px 25px;
+    }
 
-        .login-form .form-group {
-            margin-bottom: 20px;
-        }
+    .login-form .form-group {
+        margin-bottom: 16px;
+    }
 
-        .login-form label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #333;
-        }
+    .login-form label {
+        display: block;
+        margin-bottom: 6px;
+        font-weight: 500;
+        font-size: 14px;
+        color: #333;
+    }
 
-        .login-form input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            font-size: 14px;
-            transition: all 0.3s ease;
-        }
+    .login-form input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
 
-        .login-form input:focus {
-            outline: none;
-            border-color: #800000;
-            box-shadow: 0 0 0 3px rgba(128, 0, 0, 0.1);
-        }
+    .login-form input:focus {
+        outline: none;
+        border-color: #800000;
+        box-shadow: 0 0 0 2px rgba(128, 0, 0, 0.1);
+    }
 
-        .login-btn {
-            width: 100%;
-            padding: 12px;
-            background: #800000;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
+    .login-btn {
+        width: 100%;
+        padding: 11px;
+        background: #800000;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
 
-        .login-btn:hover {
-            background: #660000;
-        }
+    .login-btn:hover {
+        background: #660000;
+    }
 
-        .login-footer {
-            padding: 20px 30px;
-            background: #f8f9fa;
-            text-align: center;
-            font-size: 13px;
-            color: #666;
-        }
+    .login-footer {
+        padding: 15px 20px;
+        background: #f8f9fa;
+        text-align: center;
+        font-size: 12px;
+        color: #666;
+    }
 
-        .alert {
-            padding: 12px 15px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
+    .alert {
+        padding: 10px 12px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        font-size: 13px;
+    }
 
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border-left: 4px solid #dc3545;
-        }
+    .alert-error {
+        background: #f8d7da;
+        color: #721c24;
+        border-left: 4px solid #dc3545;
+    
+    }
+    .forgot-password {
+        display: block;
+        margin-top: 10px;
+        margin-bottom: 15px;
+        text-align: right;
+        font-size: 13px;
+    }
 
-        .demo-accounts {
-            margin-top: 20px;
-            padding: 15px;
-            background: #fff3cd;
-            border-radius: 4px;
-            font-size: 13px;
-        }
+    .forgot-password a {
+        color: #800000;
+        text-decoration: none;
+        padding: 5px 8px;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+    }
 
-        .demo-accounts strong {
-            display: block;
-            margin-bottom: 8px;
-            color: #856404;
-        }
-
-        .demo-accounts p {
-            margin: 5px 0;
-            color: #856404;
-        }
-    </style>
+    .forgot-password a:hover {
+        background: rgba(128, 0, 0, 0.08);
+        text-decoration: underline;
+    }
+</style>
 </head>
 <body>
     <div class="login-container">
@@ -227,7 +265,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </div>
 
             <div class="login-body">
-                <?php if (!empty($error)): ?>
+                <?php if (isset($_GET['archived']) && $_GET['archived'] == '1' && empty($error)): ?>
+                    <div class="alert alert-error">Your student account is archived because it has already reached four years from the enrollment date.</div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($error)): ?>
                     <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>
                 <?php endif; ?>
 
@@ -242,7 +284,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             type="text"
                             id="student_id"
                             name="student_id"
-                            placeholder="e.g., 2021-001234"
+                            placeholder="e.g., 20000000"
                             value="<?php echo htmlspecialchars($_POST['student_id'] ?? ''); ?>"
                             required
                             autofocus
@@ -261,14 +303,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     </div>
 
                     <button type="submit" class="login-btn">Log In</button>
+                    <div style="text-align:right; margin-top:10px;">
+                    <div class="forgot-password">
+                        <a href="forgot-password.php">Forgot Password?</a>
+                    </div>
+                    </div>
                 </form>
-
-                <div class="demo-accounts">
-                    <strong>Demo Accounts:</strong>
-                    <p><strong>Student:</strong> 2021-001234 / student123</p>
-                    <p><strong>Admin:</strong> ADMIN001 / admin123</p>
-                </div>
-            </div>
 
             <div class="login-footer">
                 &copy; <?php echo date('Y'); ?> Holy Angel University. All rights reserved.
