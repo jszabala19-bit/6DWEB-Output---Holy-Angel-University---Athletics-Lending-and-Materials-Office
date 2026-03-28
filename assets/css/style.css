@@ -1,17 +1,11 @@
-/* ===================================================================
-   HAU ATHLETICS PORTAL - CLEAN UNIVERSITY UI
-   Modern, readable, student-built look (no flashy effects)
-   NOTE: CSS-only changes. No PHP/SQL/logic touched.
-   =================================================================== */
+/* HAU ATHLETICS PORTAL - WE TOOK INSPIRATION FROM THE UNIVERSITY UI */
 
-/* Google Font (simple + realistic) */
+/* Google Font */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-/* ===================================================================
-   CSS VARIABLES
-   =================================================================== */
+/* CSS VARIABLES */
 :root {
-    /* Brand Colors (kept close to existing palette) */
+    /* Brand Colors */
     --hau-maroon: #800000;
     --hau-gold: #FFD700;
     --hau-dark-gold: #B8860B;
@@ -67,9 +61,7 @@
     --focus-ring: 0 0 0 3px rgba(128, 0, 0, 0.12);
 }
 
-/* ===================================================================
-   RESET & BASE
-   =================================================================== */
+/* RESET & BASE */
 *, *::before, *::after {
     margin: 0;
     padding: 0;
@@ -123,9 +115,7 @@ button, input, select, textarea {
     word-break: break-word;
 }
 
-/* ===================================================================
-   TOP NAVIGATION
-   =================================================================== */
+/* TOP NAVIGATION */
 .top-nav {
     position: fixed;
     top: 0;
@@ -295,9 +285,7 @@ button, input, select, textarea {
     background: var(--bg-hover);
 }
 
-/* ===================================================================
-   SIDEBAR
-   =================================================================== */
+/* SIDEBAR */
 .sidebar {
     position: fixed;
     top: var(--topnav-height);
@@ -375,9 +363,7 @@ button, input, select, textarea {
     text-align: center;
 }
 
-/* ===================================================================
-   MAIN CONTENT
-   =================================================================== */
+/* MAIN CONTENT */
 .main-content {
     margin-left: var(--sidebar-width);
     margin-top: var(--topnav-height);
@@ -422,12 +408,135 @@ button, input, select, textarea {
 }
 
 .page-actions {
-    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 0;
+    width: 100%;
+    justify-content: space-between; /* left group on left, tools+search on right */
 }
 
-/* ===================================================================
-   CARDS
-   =================================================================== */
+.page-actions .actions-left,
+.page-actions .actions-right {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.page-actions .actions-right {
+    margin-left: auto;
+}
+
+/* Inventory header actions: keep buttons grouped (no wide spacing) */
+.page-actions.inventory-actions {
+    width: auto;
+    justify-content: flex-end;
+}
+
+.inventory-view-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Student: Active Loans - Return Hint (minimal, modern) */
+.loan-instructions{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin: 0 0 14px 0;
+}
+
+.loan-instructions .loan-instructions-icon{
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background: rgba(128,0,0,0.08);
+    color: var(--color-primary);
+    font-weight: 800;
+    flex: 0 0 auto;
+}
+
+.loan-instructions .loan-instructions-text{
+    font-size: 14px;
+    color: var(--text-primary);
+    line-height: 1.35;
+}
+
+.loan-instructions .loan-instructions-text strong{
+    font-weight: 800;
+}
+
+.loan-instructions .loan-instructions-muted{
+    display:block;
+    margin-top: 4px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+@media (max-width: 480px){
+    .loan-instructions{ align-items:center; }
+}
+
+@media (max-width: 640px) {
+    .page-actions.inventory-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+/* Uniform toolbar control heights */
+.page-actions .btn-sm,
+.page-actions .input {
+    height: 34px;
+}
+
+.search-form {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.search-input {
+    width: 220px;
+    min-width: 220px;
+}
+
+/* Lightweight input style used in header toolbars */
+.input {
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    background: #fff;
+    height: 34px;
+    line-height: 1.2;
+}
+
+.input:focus {
+    outline: none;
+    border-color: rgba(128, 0, 0, 0.45);
+    box-shadow: var(--focus-ring);
+}
+
+select.input {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+}
+
+/* CARDS */
 .card {
     background: var(--bg-primary);
     border-radius: var(--radius-md);
@@ -478,9 +587,7 @@ button, input, select, textarea {
     .card-body { overflow-x: auto; }
 }
 
-/* ===================================================================
-   EQUIPMENT GRID
-   =================================================================== */
+/* EQUIPMENT GRID */
 .equipment-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -590,11 +697,14 @@ button, input, select, textarea {
     background: rgba(220, 53, 69, 0.12);
 }
 
-/* ===================================================================
-   BADGES
-   =================================================================== */
+/* BADGES */
 .status-badge,
-.badge {
+.badge,
+.badge-success,
+.badge-danger,
+.badge-warning,
+.badge-info,
+.badge-secondary {
     display: inline-block;
     padding: 4px 10px;
     border-radius: var(--radius-full);
@@ -603,6 +713,7 @@ button, input, select, textarea {
     text-transform: uppercase;
     letter-spacing: 0.35px;
     border: 1px solid transparent;
+    white-space: nowrap; /* prevent words like 'Reward' from wrapping */
 }
 
 .status-badge.available,
@@ -670,9 +781,7 @@ a.status-badge:hover {
     text-decoration: underline;
 }
 
-/* ===================================================================
-   BUTTONS
-   =================================================================== */
+/* BUTTONS */
 .btn {
     display: inline-flex;
     align-items: center;
@@ -792,9 +901,7 @@ a.status-badge:hover {
     width: 100%;
 }
 
-/* ===================================================================
-   FORMS
-   =================================================================== */
+/* FORMS */
 .form-group {
     margin-bottom: 16px;
 }
@@ -880,9 +987,7 @@ select.form-control {
     gap: 14px;
 }
 
-/* ===================================================================
-   TABLES
-   =================================================================== */
+/* TABLES */
 .table-responsive {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -949,9 +1054,7 @@ select.form-control {
     .table-actions { flex-direction: column; align-items: stretch; }
 }
 
-/* ===================================================================
-   ALERTS
-   =================================================================== */
+/* ALERTS */
 .alert {
     padding: 13px 16px;
     border-radius: var(--radius-sm);
@@ -992,9 +1095,7 @@ select.form-control {
     border-color: rgba(23,162,184,0.22);
 }
 
-/* ===================================================================
-   MODALS
-   =================================================================== */
+/* MODALS */
 .modal {
     display: none;
     position: fixed;
@@ -1078,9 +1179,7 @@ select.form-control {
     flex-wrap: wrap;
 }
 
-/* ===================================================================
-   STATS
-   =================================================================== */
+/* STATS */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -1118,9 +1217,7 @@ select.form-control {
     font-weight: 700;
 }
 
-/* ===================================================================
-   EMPTY STATES
-   =================================================================== */
+/* EMPTY STATES */
 .empty-state {
     text-align: center;
     padding: 54px 18px;
@@ -1146,9 +1243,7 @@ select.form-control {
     margin-bottom: 16px;
 }
 
-/* ===================================================================
-   FILTERS
-   =================================================================== */
+/* FILTERS */
 .filters {
     background: var(--bg-primary);
     border-radius: var(--radius-md);
@@ -1165,9 +1260,7 @@ select.form-control {
     align-items: end;
 }
 
-/* ===================================================================
-   PAGINATION
-   =================================================================== */
+/* PAGINATION */
 .pagination {
     display: flex;
     justify-content: center;
@@ -1204,9 +1297,7 @@ select.form-control {
     pointer-events: none;
 }
 
-/* ===================================================================
-   LOGIN PAGE (moved from inline <style> in auth/login.php)
-   =================================================================== */
+/* LOGIN PAGE */
 .login-container {
     min-height: 100vh;
     display: flex;
@@ -1221,7 +1312,7 @@ select.form-control {
     background-repeat: no-repeat;
 }
 
-/* Avoid forced fixed background on mobile (can lag) */
+
 @media (min-width: 1024px) {
     .login-container { background-attachment: fixed; }
 }
@@ -1342,9 +1433,7 @@ select.form-control {
     color: #856404;
 }
 
-/* ===================================================================
-   POINTS GUIDE (Account page)
-   =================================================================== */
+/* POINTS GUIDE (Account page) */
 .points-guide {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1387,9 +1476,7 @@ select.form-control {
     .points-list { margin-left: 16px; }
 }
 
-/* ===================================================================
-   UTILITIES
-   =================================================================== */
+/* UTILITIES */
 .text-center { text-align: center; }
 .text-left { text-align: left; }
 .text-right { text-align: right; }
@@ -1424,9 +1511,7 @@ select.form-control {
 .gap-10 { gap: 10px; }
 .gap-20 { gap: 20px; }
 
-/* ===================================================================
-   RESPONSIVE
-   =================================================================== */
+/* RESPONSIVE */
 @media (max-width: 1024px) {
     .main-content { padding: 18px; }
     :root { --sidebar-width: 230px; }
@@ -1457,9 +1542,7 @@ select.form-control {
     .sidebar-toggle { display: none; }
 }
 
-/* ===================================================================
-   PRINT
-   =================================================================== */
+/* PRINT */
 @media print {
     .top-nav,
     .sidebar,
@@ -1490,8 +1573,6 @@ select.form-control {
     .site-title { max-width: 38vw; }
 }
 
-
-/* Pending request box (keeps message visible, aligned, non-dismissible) */
 .pending-request-box{
   display:flex;
   align-items:flex-start;
@@ -1541,3 +1622,314 @@ select.form-control {
 
 /* Preferences */
 body.pref-reduce-motion *{ transition: none !important; animation: none !important; }
+
+
+/* Profile info alignment (My Account) */
+.profile-table { width: 100%; border-collapse: collapse; }
+.profile-table .profile-label { width: 160px; white-space: nowrap; vertical-align: top; }
+.profile-table .profile-value { word-break: break-word; }
+
+/* ===================================================================
+   RESPONSIVE / UI FIXES (CSS only patch)
+   =================================================================== */
+
+/* Safer text wrapping: avoid one-letter stacking inside tables/cards */
+.card,
+.card *,
+.table,
+.table *,
+.btn,
+.btn *,
+.points-badge,
+.points-badge * {
+    word-break: normal;
+    overflow-wrap: break-word;
+}
+
+/* Keep primary table content readable */
+.table {
+    table-layout: auto;
+}
+
+.table th,
+.table td {
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
+.table td:first-child {
+    min-width: 190px;
+}
+
+.table td > div[style*="display: flex"] {
+    min-width: 170px;
+    align-items: center !important;
+    flex-wrap: nowrap;
+}
+
+.table td img {
+    flex: 0 0 auto;
+}
+
+.table td strong {
+    display: inline-block;
+    white-space: normal;
+    line-height: 1.35;
+}
+
+/* Better card spacing and hierarchy */
+.card {
+    border-radius: 18px;
+}
+
+.card-header {
+    padding: 18px 20px;
+}
+
+.card-body,
+.modal-body {
+    padding: 20px;
+}
+
+.card-title {
+    line-height: 1.3;
+}
+
+/* Form polish */
+.form-control {
+    min-height: 44px;
+    border-radius: 10px;
+}
+
+textarea.form-control {
+    min-height: 112px;
+}
+
+.checkbox-group {
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.checkbox-group input[type='checkbox'] {
+    margin-top: 2px;
+    flex: 0 0 auto;
+}
+
+.checkbox-group label {
+    line-height: 1.5;
+}
+
+/* Details page request flow box */
+.card-body > div[style*="background: #f8f9fa"] {
+    background: #f8fafc !important;
+    border: 1px solid var(--border-color);
+    border-radius: 14px !important;
+    padding: 16px !important;
+}
+
+.card-body > div[style*="background: #f8f9fa"] ol {
+    padding-left: 18px;
+}
+
+/* Stats cards */
+.stat-card {
+    border-radius: 16px;
+    min-height: 116px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Header action/search responsiveness */
+.search-form {
+    flex-wrap: wrap;
+}
+
+.search-input {
+    max-width: 100%;
+}
+
+/* Sidebar usability */
+.sidebar {
+    scrollbar-width: thin;
+}
+
+/* Better mobile top bar fit */
+@media (max-width: 768px) {
+    .top-nav {
+        gap: 10px;
+        padding: 0 10px;
+    }
+
+    .top-nav-left,
+    .top-nav-right {
+        min-width: 0;
+    }
+
+    .site-title {
+        max-width: 34vw;
+        font-size: 12px;
+    }
+
+    .points-badge {
+        padding: 5px 8px;
+        font-size: 11px;
+        gap: 6px;
+    }
+
+    .user-avatar {
+        width: 34px;
+        height: 34px;
+    }
+
+    .main-content {
+        padding: 12px;
+    }
+
+    .page-title {
+        font-size: 22px;
+    }
+
+    .card,
+    .equipment-card,
+    .stat-card,
+    .filters,
+    .loan-instructions,
+    .alert {
+        border-radius: 16px;
+    }
+
+    .card-header,
+    .card-body,
+    .modal-body,
+    .modal-header,
+    .modal-footer {
+        padding-left: 14px;
+        padding-right: 14px;
+    }
+
+    .loan-instructions {
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .loan-instructions .loan-instructions-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 9px;
+    }
+
+    .btn,
+    .btn-sm,
+    .btn-lg {
+        min-height: 42px;
+    }
+
+    .page-actions,
+    .page-actions .actions-left,
+    .page-actions .actions-right {
+        width: 100%;
+    }
+
+    .page-actions .actions-left > *,
+    .page-actions .actions-right > *,
+    .search-form,
+    .search-form .search-input,
+    .search-form .btn {
+        width: 100%;
+    }
+
+    .search-input {
+        min-width: 0;
+    }
+
+    /* Force inline grid layouts in pages to stack cleanly on phones */
+    [style*="grid-template-columns: 1fr 1fr"],
+    [style*="grid-template-columns: 1fr 2fr"],
+    [style*="grid-template-columns: repeat(3, 1fr)"],
+    [style*="display:grid;grid-template-columns:1fr 1fr"] {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+
+    /* Make wide fixed-width cards full width */
+    .card[style*="max-width: 520px"] {
+        max-width: 100% !important;
+    }
+
+    /* Keep tables readable with horizontal scroll instead of crushed columns */
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 2px;
+    }
+
+    .table {
+        min-width: 760px;
+    }
+
+    .table td:first-child {
+        min-width: 220px;
+    }
+
+    .table td > div[style*="display: flex"] {
+        min-width: 210px;
+    }
+
+    /* Image + title cells on mobile */
+    .table td img[style*="width: 50px"] {
+        width: 44px !important;
+        height: 44px !important;
+        border-radius: 8px !important;
+    }
+
+    /* Details page image and heading sizing */
+    img[style*="height: 400px"] {
+        height: 240px !important;
+        border-radius: 14px !important;
+    }
+
+    h1[style*="font-size: 28px"] {
+        font-size: 24px !important;
+        line-height: 1.3;
+    }
+
+    /* Status area spacing */
+    .user-menu-dropdown {
+        right: -2px;
+        min-width: 190px;
+    }
+}
+
+@media (max-width: 480px) {
+    .site-title {
+        display: none;
+    }
+
+    .hau-logo {
+        height: 32px;
+    }
+
+    .points-badge {
+        max-width: 110px;
+        justify-content: center;
+    }
+
+    .breadcrumb {
+        font-size: 11.5px;
+    }
+
+    .page-title {
+        font-size: 20px;
+    }
+
+    .table {
+        min-width: 720px;
+    }
+
+    .empty-state {
+        padding: 40px 14px;
+    }
+}
